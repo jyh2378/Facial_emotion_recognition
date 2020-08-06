@@ -2,6 +2,8 @@ import time
 import copy
 import numpy as np
 import dlib
+import cv2
+from imutils import face_utils
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -99,8 +101,9 @@ class Agent:
     def face_dectector(self, img_path):
         img = cv2.imread(img_path)
         img_gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
-        cnnFaceDetector = dlib.cnn_face_detection_model_v1("model/mmod_human_face_detector.dat")
-        rects = cnnFaceDetector(img_gray, 1)
+        FaceDetector = dlib.get_frontal_face_detector()
+        #cnnFaceDetector = dlib.cnn_face_detection_model_v1("model/mmod_human_face_detector.dat")
+        rects = FaceDetector(img_gray, 1)
         return img, img_gray, rects
 
     def test(self):
@@ -115,18 +118,19 @@ class Agent:
             img, img_gray, rects = self.face_dectector(img_path)
             print(f"{idx}th img face detect time:{time.time() - start}")
             for (i, rect) in enumerate(rects):
-                x1 = rect.rect.left()
-                y1 = rect.rect.top()
-                x2 = rect.rect.right()
-                y2 = rect.rect.bottom()
-                cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 3)
-                face = img[y1:y2, x1:x2]
+                (x, y, w, h) = face_utils.rect_to_bb(rect)
+                cv2.rectangle(img, (x, y), (x+w, y+h), (255, 255, 255), 3)
+                face = img_gray[y:y+h, x:x+w]
+                if face.size == 0:
+                    continue
                 start = time.time()
-                face = cv2.resize(face, dsize=(112, 112)).transpose(2, 0, 1)
-                face = torch.FloatTensor(face).unsqueeze(0)
-                pred = torch.argmax(self.model(face)).item()
+                face = cv2.resize(face, dsize=(112, 112))
+                norm_face = cv2.normalize(face, face, 0., 1., norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+                stacked_face = np.stack((norm_face,)*3, axis=-1).transpose((2, 0, 1))
+                stacked_face = torch.FloatTensor(stacked_face).unsqueeze(0)
+                pred = torch.argmax(self.model(stacked_face)).item()
                 pred_label = label_dic[pred]
-                cv2.putText(img, str(pred_label), (x1, y1+20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (36,255,12), 2)
+                cv2.putText(img, str(pred_label), (x, y+30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (36,255,12), 2)
                 print(f"{idx}th img {i}th face classifying time:{time.time() - start}")
 
             cv2.imwrite(os.path.join(predict_dir, img_name), img)

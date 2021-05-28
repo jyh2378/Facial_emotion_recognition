@@ -6,7 +6,7 @@ This model detect and classify facial emotion of five categories (neutral, anger
 
 # Approach
 This model are composed two part: Facial detection and emotion classification
-- Facial detector: I use dlib library with pretrained network("mmod_human_face_detector") to dectect face. Network can be downloaed from [hear](http://dlib.net/files/).
+- Facial detector: I use dlib library with pretrained network("mmod_human_face_detector") to dectect face. Network can be downloaded from [hear](http://dlib.net/files/).
 
 - Emotion classifier: To make more light-weight model, I selected MobileNetV2 as a classifier.
 
